@@ -47,47 +47,10 @@ def make_file_tree(dir_path=ROOT): # Make a dict of the folder hierarchy (starti
             elif os.path.isdir(f): # If we've stumbled upon a directory...
                 list[l] = {} # Then make a new sub-dict for our tree
                 recur(f, list[l]) # And run the recur function on our newly found directory
-            elif l.split('.')[-1] in ['py', 'txt', 'pyui', 'json', 'tpl']: # Or if we found a valid file...
+            elif l.split('.')[-1] in ['py', 'txt', 'pyui', 'json', 'tpl', 'css']: # Or if we found a valid file...
                 list[l] = pathname2url(f[len(dir_path)+1:]) # Then add the filename to the tree along with it's full pathname (relative to ROOT)
     recur(dir_path, file_dict) # Start the chain reaction
     return file_dict # And then return our baby tree (they grow up so fast *sniffle*)
-
-keys = []
-keys_str = ''
-def load_all_keys():
-    if len(keys) == 0:
-         file_object = open('python-complete-dict','r')
-         try:
-             for line in file_object:
-                 keys.append(line.strip())
-                 #print(line)
-         finally:
-             file_object.close()
-    keys_str = ''.join(keys)
-    #keys_str = 'and#as#assert#break#class#continue'
-
-@get('/search.do')
-def search():
-    load_all_keys()
-    q = request.GET.get('q')
-    '''
-    m = re.search(q,keys_str)
-    s = ''
-    if m:
-        s = m.group(0)
-    '''
-    match = []
-    for key in keys:
-        if key.find(q) == 0:
-            #ret = ("[{}]".format(key))
-            match.append(key)
-            if len(match)>=3:
-                break
-    #ret = ("[%s]"%",".join(match))
-    ret = json.dumps(match)
-    print("param:%s;resp:%s"%(q,ret))
-    return ret
-
 
 @get('/') # Map this function to the root of the website for GET requests
 def edit(): # This function will get called for each GET request to /
@@ -113,8 +76,11 @@ def submit(): # This function will get called for each POST request to /
             f.write(request.forms.get('code').replace('\r', '')) # And dump our code into it
         if PYTHONISTA: # And if we are in Pythonista
             editor.reload_files() # Then we need to reload the files so our newly edited file is visible
+        print('Save file: %s'%filename)
+        return '{"msg": "Save sucess."}'
     else: # If it's not a valid file...
-        return template('./main.tpl', files = make_file_tree(ROOT), error = 'Invalid filename') # Yell at the user some more
+        return '{"msg": "Invalid file.Save Failure."}'
+        #return template('./main.tpl', files = make_file_tree(ROOT), error = 'Invalid filename') # Yell at the user some more
 
 @get('/static/<filepath:path>') # Map this function to any GET request in the /static folder
 def server_static(filepath): # This function will just return anything in the /static folder
@@ -139,9 +105,41 @@ def get_local_ip_addr(): # Get the local ip address of the device
     s.close() # Close the socket
     return ip # And return the IP address
 
+'''
+2018.02.01
+author: gordon
+add code complete suport
+'''
+code_keys = [] #load python-complete-dict to list
+match_count = 5
+def load_code_keys():
+    if len(code_keys) == 0:
+         file_object = open('python-complete-dict','r')
+         try:
+             for line in file_object:
+                 code_keys.append(line.strip())
+         finally:
+             file_object.close()
+
+@get('/search.do')
+def search():
+    load_code_keys()
+    q = request.GET.get('q')
+    match = []
+    for key in code_keys:
+        if key.find(q) == 0:
+            match.append(key)
+            if len(match) >= match_count:
+                break
+    ret_json = json.dumps(match)
+    print("param:%s;resp:%s"%(q,ret_json))
+    return ret_json
+
+load_code_keys();
+print('Initial: add all code keys - %d. max match count - %d' % (len(code_keys),match_count))
+
 print('''\nTo remotely edit files:
    On your computer open a web browser to http://{}:8080'''.format(get_local_ip_addr())) # Print out some instructions
-
 debug(True) # Set debugging mode to true (shows detailed errors and such)
 if PYTHONISTA: # If we are running in Pythonista...
     print('''\nIf you're using Safari to connect, you can simply select "Pythonista WebIDE" from the Bonjour menu (you may need to enable Bonjour in Safari's advanced preferences).\n''') # Print out more (Pythonista specific) instructions

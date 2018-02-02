@@ -7,49 +7,22 @@
         <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
 
         <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.34.0/codemirror.min.css">
+        <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.34.0/addon/hint/show-hint.css">
+        
         <link rel="stylesheet" type="text/css" href="/static/solarized.css">
         <!-- <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.15.2/theme/solarized.min.css"> -->
         <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.34.0/codemirror.min.js"></script>
         <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.34.0/mode/python/python.min.js"></script>
         <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.34.0/mode/javascript/javascript.min.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.34.0/addon/hint/show-hint.js"></script>
+
         <script type="text/javascript">
-           $(document).ready(function(){
-                $(".user_loadq").keyup(function(){
-                    var uname = $(this).val();
-                    if(uname.length >= 1){
-                        $.getJSON('search.do?q='+uname,null,function (data) {
-                            var item;
-                            //alert(data);
-                            $(".searchmore").empty();
-                            if(data !=null){
-                                //alert(data);
-                                $.each(data,function(i,res){
-                                    item = "<li>"+res+"</li>";
-                                    //item = "<p>"+res+"</p>
-                                    $(".searchmore").append(item);
-                                })
-                                //alert(item);
-                                $(".searchmore").show();
-                            }else{
-                                $(".searchmore").hide();
-                            }
-                        });
-                    }else{
-                        $(".searchmore").hide();
-                    }
-                })
-                
-                
-                $(document).on("click", ".searchmore li", function(){
-                    $(".user_loadq").val(trim($(this).text()));
-                    $(".searchmore").hide();
-                });
- 
-                $(".searchinput").mouseleave(function(){
-                    $(".searchmore").hide();
-                })
-                
-            });
+            function debug(txt){
+                //$(".user_loadq").val(txt);
+                //$(".user_loadq").attr("value",txt);
+                //alert(txt);
+            }
+            
             window.onload = function() {
                 var editor = CodeMirror.fromTextArea(document.getElementById("codemirror"), {
                     lineNumbers: true,
@@ -67,30 +40,87 @@
                         <%end
                     end%>
                 });
-
+ 
+                $("#submit").click(function() {
+                    editor.save();
+                    $.ajaxSettings.async = false;
+                    $.post('/', $('#save').serialize(),function(data){
+                        ret = $.parseJSON(data);
+                        alert(ret.msg);
+                    });
+                    return false;
+                });
+                
                 editor.setOption("extraKeys", {
+                    'Ctrl': function(cm) {
+                            //sel = cm.getSelection();
+                            //post_search_code(sel);
+                            editor.showHint();
+                        },
                     Tab: function(cm) {
                             var spaces = Array(cm.getOption("indentUnit") + 1).join(" ");
                             cm.replaceSelection(spaces);
-                            //alert('tab key');
                         }
                 });
-                $("#submit").click(function() {
-                    editor.save();
-                    $.post('/', $('#save').serialize());
-                    return false;
-                });
-                $("#code").click(function(){
-                    //alert($('#iframe_txt'));
-                    //txtval = window.frames[0].document.body.innerText;
-                    //var txtval=$("#iframe_txt").context.body.innerText;
-                    //var txtval=document.frames["iframe_txt"].document.body.innerHtml;
-                    //alert(txtval);
-                    $.getJSON('search.do?q=button',"",function (data) {
-                            alert('aa');
-                        });
-                });
-            }
+                /*
+                editor.on('change', function() {  
+                    editor.showHint();
+                }); 
+                */
+                
+                (function(CodeMirror) {
+                   var Pos = CodeMirror.Pos; // A Pos instance represents a position within the text.
+                   
+                   function scriptHint(editor, getToken, options) {
+                        // Find the token at the cursor=
+                        var cur = editor.getCursor(), token = getToken(editor, cur), tprop = token;
+                        var key = "";
+                        input = jQuery.trim(token.string);
+                        if (input.length >= 2){
+                            var arr = input.split(" ");
+                            if (arr.length > 0){
+                                key = arr[arr.length-1];
+                            } else {
+                                key = input;
+                            }
+                        }
+                        var item = new Array();
+                        if (key !== ""){
+                            $.ajaxSettings.async = false;
+                            $.getJSON('search.do?q='+key,null,function (data) {
+                                if(data !=null){
+                                    $.each(data,function(i,res){
+                                        item.push(res);
+                                    });
+                                }else{
+                                    //
+                                }
+                            });
+                        }
+                        return {
+                            list : item,
+                            from : Pos(cur.line, fetchStartPoint(token)), // combine first pos,!import
+                            to : Pos(cur.line, token.end)
+                        };}
+                
+                   function fetchStartPoint(token) {
+                       var index = token.string.lastIndexOf("\.");
+                       if (index < 0) {
+                         //return token.start + 1;
+                         return token.end + 1;
+                       } else {
+                         return token.start + index + 1;}
+                    }
+    
+                  function pythonHint(editor, options) {
+                      return scriptHint(editor, function(e, cur) {
+                          return e.getTokenAt(cur);}, options);
+                  }
+                  
+                  CodeMirror.registerHelper("hint", "python", pythonHint);
+              })(CodeMirror);
+              
+          }
         </script>
         <link rel="stylesheet" type="text/css" href="/static/style.css">
     </head>
@@ -133,15 +163,7 @@
                         %end
                     </div>
                     <button id="submit" type="submit" class="btn btn-default base01-color base3-background">Save</button>
-                    <button id="code" type="button" class="btn btn-default base01-color base3-background">Codes</button>
-                    <div class="searchinput">
-                    <input  type="text"  class="user_loadq cz_top_input" style="width:169px;" >
-                    <ul class="searchmore" id="searchmore">
-                    </ul>
-                    <div class="clearfloat"></div> 
-                    </div>
                 </form>
-                
             </div><!-- /.container-fluid -->
         </nav>
         <div class="container">
@@ -151,12 +173,11 @@
                 {{error}}
             </div>
             %end
-            <h2 class="base01-color">Edit File</h2>
+            <!-- <h2 class="base01-color">Edit File</h2> -->
+            <p>Code Complete : Press 'Ctrl'. (Only support Python) </p>
             <p>
                 <textarea name="code" id="codemirror" form="save">{{code if defined('code') else ''}}</textarea>
             </p>
         </div>
-        
-        <!--<iframe src="/static/python-complete-dict.txt" id="iframe_txt"></iframe>-->
     </body>
 </html>
