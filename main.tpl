@@ -75,8 +75,10 @@
                         // Find the token at the cursor=
                         var cur = editor.getCursor(), token = getToken(editor, cur), tprop = token;
                         var key = "";
-                        input = jQuery.trim(token.string);
-                        if (input.length >= 2){
+                        //input = jQuery.trim(token.string);
+                        input = jQuery.trim(editor.getLine(cur.line));
+                        //alert(input);
+                        if (input.length >= 1){
                             var arr = input.split(" ");
                             if (arr.length > 0){
                                 key = arr[arr.length-1];

@@ -111,19 +111,35 @@ author: gordon
 add code complete suport
 '''
 code_keys = [] #load python-complete-dict to list
-match_count = 5
+match_count = 10
 def load_code_keys():
-    if len(code_keys) == 0:
+    keys = []
+    if len(keys) == 0:
          file_object = open('python-complete-dict','r')
          try:
              for line in file_object:
-                 code_keys.append(line.strip())
+                 keys.append(line.strip())
          finally:
              file_object.close()
+    #code_keys.extend(list(set(keys)))
+    code_keys.extend(keys)
+
+def load_more_code_keys():
+    code_more = []
+    file_object = open('complete-dict','r')
+    try:
+        for line in file_object:
+            code_more.append(line.strip())
+    finally:
+        file_object.close()
+    print("Load more code. count: %d" % len(code_more))
+    if code_more:
+        #code_keys.extend(list(set(code_more)))
+        code_keys.extend(code_more)
 
 @get('/search.do')
 def search():
-    load_code_keys()
+    #load_code_keys()
     q = request.GET.get('q')
     match = []
     for key in code_keys:
@@ -137,6 +153,7 @@ def search():
 
 load_code_keys();
 print('Initial: add all code keys - %d. max match count - %d' % (len(code_keys),match_count))
+load_more_code_keys()
 
 print('''\nTo remotely edit files:
    On your computer open a web browser to http://{}:8080'''.format(get_local_ip_addr())) # Print out some instructions
