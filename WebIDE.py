@@ -2,6 +2,7 @@ from bottle import get, post, route, run, debug, template, request, static_file,
 import os, socket, errno # Import standard python libraries that we need
 import re
 import json
+import io
 
 try:
     from urllib.request import pathname2url # Try to import pathname2url from the python 3 location
@@ -59,7 +60,8 @@ def edit(): # This function will get called for each GET request to /
     if filename: # If there is a filename...
         fullname = os.path.realpath(os.path.join(ROOT, filename)) # Get the full path (relative to /, not ROOT this time)
         if os.path.isfile(fullname) and fullname.startswith(ROOT): # If it's a file, and it is inside our ROOT directory (for safety)
-            with open(fullname, encoding = 'utf-8', mode = 'r') as in_file: # Open the file...
+            #with open(fullname, encoding = 'utf-8', mode = 'r') as in_file: # Open the file...
+            with io.open(fullname, encoding = 'utf-8', mode = 'r') as in_file:
                 code = in_file.read() # And read all of it's juicy insides
                 return template('./main.tpl', files = tree, filename = filename, code = code) # Read our template and give it the file tree, the name of the file, and the code
         else: # If it's not a file or not in the ROOT directory...
